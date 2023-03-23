@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  semantic-kernel:
+    build:
+      context: ../
+      dockerfile: ./samples/docker/azure-functions-dotnet.Dockerfile
+    entrypoint: bash -c "source /root/.nvm/nvm.sh; func start --csharp"
+    image: semantic-kernel:latest
+    ports:
+      - 127.0.0.1:7071:7071
+    restart: "unless-stopped"
+    working_dir: /opt/semantic-kernel/samples/dotnet/KernelHttpServer/
+
+  github-qna-webapp:
+    depends_on:
+      - semantic-kernel
+    entrypoint: bash -c "yarn install; yarn start"
+    env_file:
+      - ~/.openapi.env
+    environment:
+      - REACT_APP_FUNCTION_URI=http://localhost:7071
+      - REACT_APP_OPEN_AI_EMBEDDING_KEY=${OPENAPI_KEY}
+      - REACT_APP_OPEN_AI_EMBEDDING_MODEL=${OPENAPI_EMBEDDING_MODEL:-code-davinci-002}
+      - REACT_APP_OPEN_AI_COMPLETION_KEY=${OPENAPI_KEY}
+    image: node:lts-bullseye
+    ports:
+      - 127.0.0.1:3000:3000
+    restart: "unless-stopped"
+    volumes:
+      - ./:/opt/semantic-kernel/
+    working_dir: /opt/semantic-kernel/apps/github-qna-webapp-react/
